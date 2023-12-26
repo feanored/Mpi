@@ -4,7 +4,7 @@
 #include <mpi.h>
 #include <chrono>
 
-#define MASTER 0
+constexpr int MASTER = 0;
 
 int main(int argc, char* argv[]) {
     int rank, size;

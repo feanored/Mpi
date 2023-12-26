@@ -4,24 +4,22 @@ project(MPICpp CXX)
 # Find MPI package
 find_package(MPI REQUIRED)
 
-# Create executable
-add_executable(Pi pi.cpp)
+# List of projects
+set(project_list "pi")
 
-# Include MPI headers
-target_include_directories(Pi PRIVATE ${MPI_CXX_INCLUDE_PATH})
+foreach(project IN LISTS project_list)
 
-# Link MPI libraries
-target_link_libraries(Pi ${MPI_CXX_LIBRARIES})
+    # Create executable
+    add_executable(${project} ${project}.cpp)
 
-# Set MPI flags
-set_target_properties(Pi PROPERTIES COMPILE_FLAGS "${MPI_CXX_COMPILE_FLAGS}")
-set_target_properties(Pi PROPERTIES LINK_FLAGS "${MPI_CXX_LINK_FLAGS}")
+    # Include MPI headers
+    target_include_directories(${project} PRIVATE ${MPI_CXX_INCLUDE_PATH})
 
-# Enable C++11
-set_property(TARGET Pi PROPERTY CXX_STANDARD 11)
+    # Link MPI libraries
+    target_link_libraries(${project} ${MPI_CXX_LIBRARIES})
 
-# Set compilation flags (optional: adjust as needed)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3")
+    # Set MPI flags
+    set_target_properties(${project} PROPERTIES COMPILE_FLAGS "${MPI_CXX_COMPILE_FLAGS}")
+    set_target_properties(${project} PROPERTIES LINK_FLAGS "${MPI_CXX_LINK_FLAGS}")
 
-# Enable MPI support in CMake (optional: adjust as needed)
-include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
+endforeach()
