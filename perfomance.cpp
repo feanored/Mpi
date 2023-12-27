@@ -3,6 +3,7 @@
 #include <cmath>
 #include <chrono>
 #include <functional>
+#include <mpi.h>
 
 using namespace std;
 using namespace chrono;
@@ -15,14 +16,13 @@ void logfile(double value) {
     // Open a binary file for writing
     ofstream outFile("log.bin", std::ios::binary);
 
-    // Check if the file is open
     if (!outFile.is_open()) {
         std::cerr << "Error opening file for writing." << endl;
         exit(1);
     }
 
-    // Write binary data to the file    
-    outFile.write(reinterpret_cast<const char*>(data), sizeof(value));
+    // Convert data to ascii binary
+    outFile.write(reinterpret_cast<const char*>(data), sizeof(data));
 
     // Close the file
     outFile.close();
@@ -43,7 +43,7 @@ inline double compositeAtan(double x) {
     return 4 * atan(x);
 }
 
-// Function to benchmark a given math function
+// Function to benchmark given a math function
 long long benchmarkFunction(int iterations, double (*mathFunction)(double)) {
     double result = 0.0;
 
@@ -60,30 +60,41 @@ long long benchmarkFunction(int iterations, double (*mathFunction)(double)) {
     return duration;
 }
 
-int main() {
-    srand(666);
-    const int iterations = 100000000; // Adjust the number of iterations as needed
-    long long duration;
+int main(int argc, char* argv[]) {
+    int size, rank;
+    const int _SIZE = 5;
+    const int iterations = 250000000;
+    long long 
+        duration_p[_SIZE]{}, 
+        duration_max[_SIZE]{}, 
+        duration_min[_SIZE]{}, 
+        duration_sum[_SIZE]{};
 
-    // Benchmark baseline function
-    duration = benchmarkFunction(iterations, baselineOperation);
-    cout << "Benchmark (addition): " << duration << " ms" << endl;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    srand(666 + rank);
 
-    // Benchmark multiplication function
-    duration = benchmarkFunction(iterations, multiplication);
-    cout << "Benchmark (multiplication): " << duration << " ms" << endl;
+    duration_p[0] = benchmarkFunction(iterations / size, baselineOperation);
+    duration_p[1] = benchmarkFunction(iterations / size, multiplication);
+    duration_p[2] = benchmarkFunction(iterations / size, atan);
+    duration_p[3] = benchmarkFunction(iterations / size, acos);
+    duration_p[4] = benchmarkFunction(iterations / size, compositeAtan);
 
-    // Benchmark atan function
-    duration = benchmarkFunction(iterations, atan);
-    cout << "Benchmark (atan): " << duration << " ms" << endl;
+    for (int j = 0; j < _SIZE; ++j) {
+        MPI_Reduce(&duration_p[j], &duration_max[j], 1, MPI_LONG_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&duration_p[j], &duration_min[j], 1, MPI_LONG_LONG, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&duration_p[j], &duration_sum[j], 1, MPI_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    }
 
-    // Benchmark acos function
-    duration = benchmarkFunction(iterations, acos);
-    cout << "Benchmark (acos): " << duration << " ms" << endl;
+    if (rank == 0) {
+        cout << "Benchmark (addition):       " << duration_sum[0] / size << " ms" << endl;
+        cout << "Benchmark (multiplication): " << duration_sum[1] / size << " ms" << endl;
+        cout << "Benchmark (atan):           " << duration_sum[2] / size << " ms" << endl;
+        cout << "Benchmark (acos):           " << duration_sum[3] / size << " ms" << endl;
+        cout << "Benchmark (4*atan):         " << duration_sum[4] / size << " ms" << endl;
+    }
 
-    // Benchmark composite atan function
-    duration = benchmarkFunction(iterations, compositeAtan);
-    cout << "Benchmark (4*atan): " << duration << " ms" << endl;
-
+    MPI_Finalize();
     return 0;
 }
