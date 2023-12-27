@@ -5,7 +5,7 @@ project(MPICpp CXX)
 find_package(MPI REQUIRED)
 
 # List of projects
-set(project_list "pi" "gpi")
+set(project_list "pi" "gpi" "perfomance")
 
 foreach(project IN LISTS project_list)
 
