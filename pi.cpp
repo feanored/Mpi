@@ -4,7 +4,7 @@
 #include <mpi.h>
 #include <chrono>
 
-constexpr int MASTER = 0;
+const short MASTER = 0;
 
 int main(int argc, char* argv[]) {
     int rank, size;
@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     const int total_points = 1000000000;
     int points_inside_circle = 0;
 
-    srand(time(NULL) + rank);
+    srand(123 + rank);
 
     auto start_time = std::chrono::high_resolution_clock::now();
 

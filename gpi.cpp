@@ -2,11 +2,11 @@
 #include <cmath>
 #include <mpi.h>
 
-const double PI = 4*atan(1);
-const int MASTER = 0;
+const double PI = 4 * atan(1);
+const short MASTER = 0;
 
 int main(int argc, char* argv[]) {
-	int num_figs, rank, size;
+	int num_figs = 0, rank, size;
 	double parcial_pi, pi, h, sum, x;
 
 	MPI_Init(&argc, &argv);
@@ -26,8 +26,8 @@ int main(int argc, char* argv[]) {
 
 		h = 1. / (double)num_figs;
 		sum = 0.;
-		//for (int i = rank + 1; i <= num_figs; i += size) // Persian partition
-		for (int i = num_figs/size * rank + 1; i <= num_figs/size * (rank + 1); i++) // Block partition
+		//for (int i = num_figs/size * rank + 1; i <= num_figs/size * (rank + 1); i++) // Block partition
+		for (int i = rank + 1; i <= num_figs; i += size) // Persian partition
 		{
 			x = h * ((double)i - 0.5);
 			sum += 4. / (1. + x * x);

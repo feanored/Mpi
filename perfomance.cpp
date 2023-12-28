@@ -5,19 +5,20 @@
 #include <functional>
 #include <mpi.h>
 
-using namespace std;
-using namespace chrono;
+using namespace std::chrono;
 
 #define randf() ((double) rand()) / ((double) (RAND_MAX))
 
-void logfile(double value) {
+const short MASTER = 0;
+
+void static logfile(double value) {
     const double data[] = { value };
 
     // Open a binary file for writing
-    ofstream outFile("log.bin", std::ios::binary);
+    std::ofstream outFile("log.bin", std::ios::binary);
 
     if (!outFile.is_open()) {
-        std::cerr << "Error opening file for writing." << endl;
+        std::cerr << "Error opening file for writing." << std::endl;
         exit(1);
     }
 
@@ -69,11 +70,17 @@ int main(int argc, char* argv[]) {
         duration_max[_SIZE]{}, 
         duration_min[_SIZE]{}, 
         duration_sum[_SIZE]{};
+    std::chrono::steady_clock::time_point start;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     srand(666 + rank);
+
+    if (rank == MASTER) {
+        std::cout << "Running.." << std::endl;
+        start = high_resolution_clock::now();
+    }
 
     duration_p[0] = benchmarkFunction(iterations / size, baselineOperation);
     duration_p[1] = benchmarkFunction(iterations / size, multiplication);
@@ -87,12 +94,16 @@ int main(int argc, char* argv[]) {
         MPI_Reduce(&duration_p[j], &duration_sum[j], 1, MPI_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
     }
 
-    if (rank == 0) {
-        cout << "Benchmark (addition):       " << duration_sum[0] / size << " ms" << endl;
-        cout << "Benchmark (multiplication): " << duration_sum[1] / size << " ms" << endl;
-        cout << "Benchmark (atan):           " << duration_sum[2] / size << " ms" << endl;
-        cout << "Benchmark (acos):           " << duration_sum[3] / size << " ms" << endl;
-        cout << "Benchmark (4*atan):         " << duration_sum[4] / size << " ms" << endl;
+    if (rank == MASTER) {
+        std::cout << "Benchmark (addition):       " << duration_max[0] / 1000. << " s" << std::endl;
+        std::cout << "Benchmark (multiplication): " << duration_max[1] / 1000. << " s" << std::endl;
+        std::cout << "Benchmark (atan):           " << duration_max[2] / 1000. << " s" << std::endl;
+        std::cout << "Benchmark (acos):           " << duration_max[3] / 1000. << " s" << std::endl;
+        std::cout << "Benchmark (4*atan):         " << duration_max[4] / 1000. << " s" << std::endl;
+
+        auto end = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(end - start).count();
+        std::cout << "Time elapsed on Master process: " << duration / 1000. << " s" << std::endl;
     }
 
     MPI_Finalize();
