@@ -3,6 +3,7 @@
 #include <cmath>
 #include <chrono>
 #include <functional>
+#include <string>
 #include <mpi.h>
 
 using namespace std::chrono;
@@ -11,21 +12,23 @@ using namespace std::chrono;
 
 const short MASTER = 0;
 
-void static logfile(double value) {
-    const double data[] = { value };
+struct Log {
+    int f;
+    double x;
+    double y;
+};
 
-    // Open a binary file for writing
+void static logfile(double x, double y, int f) {
+    Log value{ f, x, y };
+
     std::ofstream outFile("log.bin", std::ios::binary);
-
     if (!outFile.is_open()) {
         std::cerr << "Error opening file for writing." << std::endl;
         exit(1);
     }
 
-    // Convert data to ascii binary
-    outFile.write(reinterpret_cast<const char*>(data), sizeof(data));
+    outFile.write( (char *) &value, sizeof(Log));
 
-    // Close the file
     outFile.close();
 }
 
@@ -45,18 +48,19 @@ inline double compositeAtan(double x) {
 }
 
 // Function to benchmark given a math function
-long long benchmarkFunction(int iterations, double (*mathFunction)(double)) {
-    double result = 0.0;
+long long benchmarkFunction(int iterations, double (*mathFunction)(double), int f) {
+    double result = 0.0, x;
 
     auto start = high_resolution_clock::now();
     for (int i = 0; i < iterations; ++i) {
-        result = mathFunction(randf());
+        x = randf();
+        result = mathFunction(x);
     }
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end - start).count();
 
     // Use the result variable outside the loop to prevent optimization
-    logfile(result);
+    logfile(x, result, f);
 
     return duration;
 }
@@ -82,11 +86,11 @@ int main(int argc, char* argv[]) {
         start = high_resolution_clock::now();
     }
 
-    duration_p[0] = benchmarkFunction(iterations / size, baselineOperation);
-    duration_p[1] = benchmarkFunction(iterations / size, multiplication);
-    duration_p[2] = benchmarkFunction(iterations / size, atan);
-    duration_p[3] = benchmarkFunction(iterations / size, acos);
-    duration_p[4] = benchmarkFunction(iterations / size, compositeAtan);
+    duration_p[0] = benchmarkFunction(iterations / size, baselineOperation, 1);
+    duration_p[1] = benchmarkFunction(iterations / size, multiplication, 2);
+    duration_p[2] = benchmarkFunction(iterations / size, atan, 3);
+    duration_p[3] = benchmarkFunction(iterations / size, acos, 4);
+    duration_p[4] = benchmarkFunction(iterations / size, compositeAtan, 5);
 
     for (int j = 0; j < _SIZE; ++j) {
         MPI_Reduce(&duration_p[j], &duration_max[j], 1, MPI_LONG_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
