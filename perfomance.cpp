@@ -3,7 +3,6 @@
 #include <cmath>
 #include <chrono>
 #include <functional>
-#include <string>
 #include <mpi.h>
 
 using namespace std::chrono;
@@ -33,7 +32,7 @@ void static logfile(double x, double y, int f) {
 }
 
 // Baseline operation function (addition)
-inline double baselineOperation(double x) {
+inline double addition(double x) {
     return x + x;
 }
 
@@ -49,7 +48,7 @@ inline double compositeAtan(double x) {
 
 // Function to benchmark given a math function
 long long benchmarkFunction(int iterations, double (*mathFunction)(double), int f) {
-    double result = 0.0, x;
+    double result = 0.0, x = 0.0;
 
     auto start = high_resolution_clock::now();
     for (int i = 0; i < iterations; ++i) {
@@ -74,7 +73,7 @@ int main(int argc, char* argv[]) {
         duration_max[_SIZE]{}, 
         duration_min[_SIZE]{}, 
         duration_sum[_SIZE]{};
-    std::chrono::steady_clock::time_point start;
+    steady_clock::time_point start;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -86,7 +85,7 @@ int main(int argc, char* argv[]) {
         start = high_resolution_clock::now();
     }
 
-    duration_p[0] = benchmarkFunction(iterations / size, baselineOperation, 1);
+    duration_p[0] = benchmarkFunction(iterations / size, addition, 1);
     duration_p[1] = benchmarkFunction(iterations / size, multiplication, 2);
     duration_p[2] = benchmarkFunction(iterations / size, atan, 3);
     duration_p[3] = benchmarkFunction(iterations / size, acos, 4);
